@@ -1,0 +1,21 @@
+name: ci_pipeline_storage
+
+on: [ push ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: action/checkout@v2
+      - uses: auzre/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: npm install & build
+        run: npm install && npm run build
+      - name: update web site
+        uses: azure/CLI@v1
+        with:
+          azcliVersion: 2.21.0
+          inlineScript: |
+            KEY=$(az storage account keys list --resource-group "geekday-event-rg" --account-name "geekdayangular" --query "[0].value" --output tsv)
+            az storage blob upload-batch --account-name "geekdayangular" --account-key="${KEY}" --destination '$web' --source "build"
